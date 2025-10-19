@@ -92,9 +92,9 @@ echo "$AUDIO_PATH" > "$AUDIO_PATH_FILE"
 
 if [ -n "$OUTPUT_PATH" ]; then
     echo "$OUTPUT_PATH" > "$OUTPUT_PATH_FILE"
-    echo "🎙️  Recording... (will save to: $OUTPUT_PATH)"
+    echo "🎙️  Recording started (will save to: $OUTPUT_PATH)"
 else
-    echo "🎙️  Recording... (run 'vn stop' to finish)"
+    echo "🎙️  Recording started"
 fi
 
 trap cleanup_on_cancel INT
@@ -104,7 +104,22 @@ RECORD_PID=$!
 
 START_TIME=$(date +%s)
 
-show_elapsed_time $START_TIME
-
+echo "Run 'vn stop' when finished"
 echo ""
-echo "✅ Recording finished"
+
+# Run timer in background, detached from terminal
+nohup bash -c "
+    while kill -0 $RECORD_PID 2>/dev/null; do
+        sleep 1
+        elapsed=\$(($(date +%s) - $START_TIME))
+        if [ \$elapsed -ge $MAX_DURATION ]; then
+            kill $RECORD_PID 2>/dev/null || true
+            rm -f \"$AUDIO_PATH\" 2>/dev/null || true
+            rm -rf \"$STATE_DIR\" 2>/dev/null || true
+            exit 0
+        fi
+    done
+" >/dev/null 2>&1 &
+
+# Exit immediately, returning control to user
+exit 0
