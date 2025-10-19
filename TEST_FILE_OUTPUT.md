@@ -4,7 +4,7 @@
 
 ### Test 1: Save to New File (Relative Path)
 ```bash
-cd /Users/charliecrowley/Firstly-Academy
+cd ~/projects/my-app
 vn test-output.md
 # Speak: "This is a test of the file output feature"
 vn stop
@@ -34,12 +34,12 @@ rm test-existing.md  # Cleanup
 
 ### Test 3: Absolute Path
 ```bash
-vn /Users/charliecrowley/Firstly-Academy/test-absolute.md
+vn /tmp/test-absolute.md
 # Speak: "Testing absolute path"
 vn stop
 # Expected: Creates file at absolute path
-cat /Users/charliecrowley/Firstly-Academy/test-absolute.md
-rm /Users/charliecrowley/Firstly-Academy/test-absolute.md  # Cleanup
+cat /tmp/test-absolute.md
+rm /tmp/test-absolute.md  # Cleanup
 ```
 
 ### Test 4: Home Directory Path
@@ -82,14 +82,14 @@ vn stop
 pbpaste  # Should show transcription
 ```
 
-### Test 8: Real Use Case (Your Example)
+### Test 8: Real Use Case Example
 ```bash
-cd /Users/charliecrowley/Firstly-Academy
-vn docs/voice-chat/native-chat/features/referral-exclusive.md
+cd ~/projects/my-app
+vn docs/features/new-feature.md
 # Speak your actual idea
 vn stop
-# Expected: Prepends to referral-exclusive.md
-cat docs/voice-chat/native-chat/features/referral-exclusive.md
+# Expected: Prepends to new-feature.md
+cat docs/features/new-feature.md
 ```
 
 ### Test 9: Error Handling (Invalid Path)

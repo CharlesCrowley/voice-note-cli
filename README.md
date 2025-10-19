@@ -78,10 +78,9 @@ $ vn stop
 ⏹️  Stopped recording (duration: 45s)
 📝 Transcribing... (may take ~3s)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Here is a concept for the use of the voice chat
-in Firstly Academy. The thought that just occurred
-to me was, how about if we make a character with
-the voice chat?
+Here is my idea for a new feature that allows
+users to collaborate in real-time on shared
+documents with voice annotations.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📋 Copied to clipboard!
 ✅ Done
@@ -90,26 +89,26 @@ the voice chat?
 ### Example Session (Save to File)
 
 ```bash
-$ vn docs/features/referral-exclusive.md
-🎙️  Recording... (will save to: /Users/charliecrowley/Firstly-Academy/docs/features/referral-exclusive.md)
+$ vn docs/features/new-feature.md
+🎙️  Recording... (will save to: /Users/username/projects/my-app/docs/features/new-feature.md)
 ⏱️  00:00:30
 
 $ vn stop
 ⏹️  Stopped recording (duration: 30s)
 📝 Transcribing... (may take ~3s)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Here is my idea for a referral-exclusive feature
-that gives early access to beta testers...
+Here is my idea for a new feature that helps
+users track their daily progress...
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-💾 Saved to: /Users/charliecrowley/Firstly-Academy/docs/features/referral-exclusive.md
+💾 Saved to: /Users/username/projects/my-app/docs/features/new-feature.md
 📋 Copied to clipboard!
 ✅ Done
 ```
 
 **File content** (prepended to top):
 ```markdown
-Here is my idea for a referral-exclusive feature
-that gives early access to beta testers...
+Here is my idea for a new feature that helps
+users track their daily progress...
 
 ---
 

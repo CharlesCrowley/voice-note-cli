@@ -18,7 +18,7 @@ sox --version  # Will fail if not installed (expected)
 
 ### 2. Run Installer
 ```bash
-cd /Users/charliecrowley/Firstly-Academy/scripts/voice-note
+cd ~/bin/voice-note-cli
 ./install-vn.sh
 ```
 
@@ -56,11 +56,11 @@ source ~/.zshrc  # or ~/.bashrc
 ```bash
 # Check commands exist
 which vn
-which vn
+which vn-stop
 
 # Should show:
-# /Users/charliecrowley/.local/bin/vn
-# /Users/charliecrowley/.local/bin/vn
+# ~/.local/bin/vn
+# ~/.local/bin/vn-stop
 ```
 
 ## Functional Tests
@@ -251,7 +251,7 @@ vn stop
 **Speak this challenging sentence**:
 ```
 "The quick brown fox jumps over the lazy dog near the
-First Academy building at 123 Main Street."
+downtown building at 123 Main Street."
 ```
 
 **Expected**:

@@ -3,7 +3,8 @@
 ## Installation (One-Time)
 
 ```bash
-cd /Users/charliecrowley/Firstly-Academy/scripts/voice-note
+git clone https://github.com/CharlesCrowley/voice-note-cli.git ~/bin/voice-note-cli
+cd ~/bin/voice-note-cli
 ./install-vn.sh
 source ~/.zshrc
 ```
