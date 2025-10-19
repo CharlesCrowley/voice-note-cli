@@ -105,8 +105,12 @@ fi
 
 trap cleanup_on_cancel INT
 
-# Start recording via setsid to make it a session leader (survives parent exit)
-setsid rec -q "$AUDIO_PATH" rate 16k channels 1 >/dev/null 2>&1 &
+# Start recording in a way that survives parent shell exit
+# Use a subshell with nohup, redirect all output, and use & to background
+(
+    trap '' HUP
+    rec -q "$AUDIO_PATH" rate 16k channels 1 </dev/null >/dev/null 2>&1
+) &
 RECORD_PID=$!
 
 # Give it a moment to start
@@ -124,25 +128,20 @@ START_TIME=$(date +%s)
 echo "Run 'vn stop' when finished"
 echo ""
 
-# Run timer in background, detached from terminal
-setsid bash -c "
-    RECORD_PID=$RECORD_PID
-    START_TIME=$START_TIME
-    MAX_DURATION=$MAX_DURATION
-    AUDIO_PATH=\"$AUDIO_PATH\"
-    STATE_DIR=\"$STATE_DIR\"
-
-    while kill -0 \$RECORD_PID 2>/dev/null; do
+# Run timer in background to enforce 1-hour limit
+(
+    trap '' HUP
+    while kill -0 $RECORD_PID 2>/dev/null; do
         sleep 1
-        elapsed=\$(($(date +%s) - \$START_TIME))
-        if [ \$elapsed -ge \$MAX_DURATION ]; then
-            kill \$RECORD_PID 2>/dev/null || true
-            rm -f \"\$AUDIO_PATH\" 2>/dev/null || true
-            rm -rf \"\$STATE_DIR\" 2>/dev/null || true
+        elapsed=$(($(date +%s) - $START_TIME))
+        if [ $elapsed -ge $MAX_DURATION ]; then
+            kill $RECORD_PID 2>/dev/null || true
+            rm -f "$AUDIO_PATH" 2>/dev/null || true
+            rm -rf "$STATE_DIR" 2>/dev/null || true
             exit 0
         fi
     done
-" >/dev/null 2>&1 &
+) </dev/null >/dev/null 2>&1 &
 
 # Exit immediately, returning control to user
 exit 0
