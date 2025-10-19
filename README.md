@@ -117,12 +117,27 @@ users track their daily progress...
 Old content that was already in the file...
 ```
 
-## Limits
+## Limits & Safety
 
-- **Max Duration**: 1 hour (auto-stops)
+- **Max Duration**: 1 hour (auto-stops automatically)
 - **Format**: 16kHz mono WAV (optimized for speech)
 - **Language**: English (configurable in code)
 - **Model**: Whisper Small (244MB, good accuracy)
+- **Disk Usage**: ~10MB per minute of recording (~600MB for 1 hour)
+
+### ⚠️ Important: Don't Forget to Stop!
+
+If you run `vn` and forget to run `vn stop`, the recording will:
+- Continue until the 1-hour limit
+- Take up ~600MB of disk space
+- Keep running in the background
+
+**To check for orphaned recordings:**
+```bash
+vn-cleanup
+```
+
+This will find and kill any forgotten recording processes.
 
 ## Requirements
 

@@ -1,0 +1,32 @@
+#!/bin/bash
+
+# Cleanup utility for orphaned vn recordings
+
+echo "🔍 Checking for orphaned vn recordings..."
+
+# Find all rec processes recording to vn_state
+ORPHANED=$(ps aux | grep -E "rec.*vn_state" | grep -v grep | awk '{print $2}')
+
+if [ -z "$ORPHANED" ]; then
+    echo "✅ No orphaned recordings found"
+    exit 0
+fi
+
+COUNT=$(echo "$ORPHANED" | wc -l | tr -d ' ')
+echo "⚠️  Found $COUNT orphaned recording process(es)"
+echo ""
+
+# Show details
+ps aux | grep -E "rec.*vn_state" | grep -v grep | awk '{print "  PID " $2 ": running for " $10}'
+
+echo ""
+read -p "Kill all orphaned recordings? (y/n) " -n 1 -r
+echo
+
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo "$ORPHANED" | xargs kill 2>/dev/null
+    rm -rf /tmp/vn_state
+    echo "✅ Cleaned up $COUNT orphaned process(es)"
+else
+    echo "❌ Cancelled"
+fi
