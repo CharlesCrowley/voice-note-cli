@@ -1,0 +1,110 @@
+#!/bin/bash
+
+set -e
+
+STATE_DIR="/tmp/vn_state"
+PID_FILE="$STATE_DIR/vn.pid"
+AUDIO_PATH_FILE="$STATE_DIR/vn_audio_path.txt"
+OUTPUT_PATH_FILE="$STATE_DIR/vn_output_path.txt"
+MAX_DURATION=3600
+
+show_elapsed_time() {
+    local start_time=$1
+    while kill -0 $RECORD_PID 2>/dev/null; do
+        local elapsed=$(($(date +%s) - start_time))
+        local minutes=$((elapsed / 60))
+        local seconds=$((elapsed % 60))
+        printf "\r⏱️  %02d:%02d" $minutes $seconds
+        sleep 1
+
+        if [ $elapsed -ge $MAX_DURATION ]; then
+            echo ""
+            echo "⏱️  1 hour limit reached - stopping recording"
+            kill $RECORD_PID 2>/dev/null || true
+            cleanup_without_transcribe
+            exit 0
+        fi
+    done
+}
+
+cleanup_without_transcribe() {
+    if [ -f "$AUDIO_PATH_FILE" ]; then
+        AUDIO_PATH=$(cat "$AUDIO_PATH_FILE")
+        rm -f "$AUDIO_PATH" 2>/dev/null || true
+    fi
+    rm -rf "$STATE_DIR" 2>/dev/null || true
+}
+
+cleanup_on_cancel() {
+    echo ""
+    echo "⚠️  Recording cancelled"
+    echo "🧹 Cleaning up..."
+    kill $RECORD_PID 2>/dev/null || true
+    cleanup_without_transcribe
+    echo "✅ Files deleted"
+    exit 0
+}
+
+if [ -f "$PID_FILE" ]; then
+    EXISTING_PID=$(cat "$PID_FILE")
+    if kill -0 $EXISTING_PID 2>/dev/null; then
+        echo "❌ Recording already in progress"
+        echo "Run 'vn stop' to finish current recording"
+        exit 1
+    else
+        echo "⚠️  Stale recording detected, cleaning up..."
+        cleanup_without_transcribe
+    fi
+fi
+
+if ! command -v sox &> /dev/null; then
+    echo "❌ Error: sox not installed"
+    echo "Install with: brew install sox"
+    exit 1
+fi
+
+OUTPUT_PATH=""
+if [ -n "$1" ]; then
+    OUTPUT_PATH=$(cd "$(dirname "$1")" 2>/dev/null && pwd)/$(basename "$1") || {
+        PARENT_DIR=$(dirname "$1")
+        if [[ "$1" = /* ]]; then
+            OUTPUT_PATH="$1"
+        elif [[ "$1" = ~* ]]; then
+            OUTPUT_PATH="${1/#\~/$HOME}"
+        else
+            OUTPUT_PATH="$(pwd)/$1"
+        fi
+
+        mkdir -p "$(dirname "$OUTPUT_PATH")" 2>/dev/null || {
+            echo "❌ Cannot create directory: $(dirname "$OUTPUT_PATH")"
+            exit 1
+        }
+    }
+fi
+
+mkdir -p "$STATE_DIR"
+
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+AUDIO_PATH="$STATE_DIR/vn_${TIMESTAMP}.wav"
+
+echo "$$" > "$PID_FILE"
+echo "$AUDIO_PATH" > "$AUDIO_PATH_FILE"
+
+if [ -n "$OUTPUT_PATH" ]; then
+    echo "$OUTPUT_PATH" > "$OUTPUT_PATH_FILE"
+    echo "🎙️  Recording... (will save to: $OUTPUT_PATH)"
+else
+    echo "🎙️  Recording... (run 'vn stop' to finish)"
+fi
+
+trap cleanup_on_cancel INT
+
+rec -q "$AUDIO_PATH" rate 16k channels 1 &
+RECORD_PID=$!
+
+START_TIME=$(date +%s)
+
+show_elapsed_time $START_TIME
+
+echo ""
+echo "✅ Recording finished"

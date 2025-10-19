@@ -1,0 +1,143 @@
+#!/bin/bash
+
+set -e
+
+STATE_DIR="/tmp/vn_state"
+PID_FILE="$STATE_DIR/vn.pid"
+AUDIO_PATH_FILE="$STATE_DIR/vn_audio_path.txt"
+OUTPUT_PATH_FILE="$STATE_DIR/vn_output_path.txt"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VENV_PATH="$HOME/.vn/venv"
+
+if [ ! -f "$PID_FILE" ]; then
+    echo "❌ No active recording"
+    echo "Run 'vn' to start recording"
+    exit 1
+fi
+
+RECORD_PID=$(cat "$PID_FILE")
+
+if ! kill -0 $RECORD_PID 2>/dev/null; then
+    echo "❌ Recording process not running (stale state)"
+    echo "🧹 Cleaning up..."
+    rm -rf "$STATE_DIR"
+    echo "✅ Ready for new recording"
+    exit 1
+fi
+
+if [ ! -f "$AUDIO_PATH_FILE" ]; then
+    echo "❌ Audio path file missing (corrupted state)"
+    echo "🧹 Cleaning up..."
+    kill $RECORD_PID 2>/dev/null || true
+    rm -rf "$STATE_DIR"
+    echo "✅ Ready for new recording"
+    exit 1
+fi
+
+AUDIO_PATH=$(cat "$AUDIO_PATH_FILE")
+
+echo "⏹️  Stopping recording..."
+kill $RECORD_PID 2>/dev/null || true
+sleep 2
+
+if [ ! -f "$AUDIO_PATH" ]; then
+    echo "❌ Audio file not found: $AUDIO_PATH"
+    rm -rf "$STATE_DIR"
+    exit 1
+fi
+
+if [ ! -s "$AUDIO_PATH" ]; then
+    echo "❌ Audio file is empty"
+    rm -rf "$STATE_DIR"
+    exit 1
+fi
+
+DURATION=$(soxi -D "$AUDIO_PATH" 2>/dev/null | cut -d'.' -f1)
+if [ -n "$DURATION" ]; then
+    echo "⏹️  Stopped recording (duration: ${DURATION}s)"
+else
+    echo "⏹️  Stopped recording"
+fi
+
+echo "📝 Transcribing... (may take ~3s)"
+
+if [ ! -d "$VENV_PATH" ]; then
+    echo "❌ Python environment not found"
+    echo "Run the installation script first: ./install-vn.sh"
+    BACKUP_PATH="/tmp/vn_backup_$(date +%Y%m%d_%H%M%S).wav"
+    mv "$AUDIO_PATH" "$BACKUP_PATH"
+    echo "Audio saved to: $BACKUP_PATH"
+    rm -rf "$STATE_DIR"
+    exit 1
+fi
+
+source "$VENV_PATH/bin/activate"
+
+TRANSCRIPT=$(python3 "$SCRIPT_DIR/vn-transcribe.py" "$AUDIO_PATH" 2>&1)
+TRANSCRIBE_EXIT_CODE=$?
+
+if [ $TRANSCRIBE_EXIT_CODE -ne 0 ] || [ -z "$TRANSCRIPT" ]; then
+    echo "❌ Transcription failed"
+    echo "Error: $TRANSCRIPT"
+    BACKUP_PATH="/tmp/vn_backup_$(date +%Y%m%d_%H%M%S).wav"
+    mv "$AUDIO_PATH" "$BACKUP_PATH"
+    echo "Audio saved to: $BACKUP_PATH"
+    rm -rf "$STATE_DIR"
+    exit 1
+fi
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "$TRANSCRIPT"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+OUTPUT_PATH=""
+if [ -n "$1" ]; then
+    if [[ "$1" = /* ]]; then
+        OUTPUT_PATH="$1"
+    elif [[ "$1" = ~* ]]; then
+        OUTPUT_PATH="${1/#\~/$HOME}"
+    else
+        OUTPUT_PATH="$(pwd)/$1"
+    fi
+
+    mkdir -p "$(dirname "$OUTPUT_PATH")" 2>/dev/null || {
+        echo "⚠️  Cannot create directory: $(dirname "$OUTPUT_PATH")"
+        echo "📋 Copied to clipboard only!"
+        echo "$TRANSCRIPT" | pbcopy
+        rm -f "$AUDIO_PATH"
+        rm -rf "$STATE_DIR"
+        exit 0
+    }
+elif [ -f "$OUTPUT_PATH_FILE" ]; then
+    OUTPUT_PATH=$(cat "$OUTPUT_PATH_FILE")
+fi
+
+if [ -n "$OUTPUT_PATH" ]; then
+    if [ -f "$OUTPUT_PATH" ] && [ -s "$OUTPUT_PATH" ]; then
+        EXISTING_CONTENT=$(cat "$OUTPUT_PATH")
+        echo "$TRANSCRIPT" > "$OUTPUT_PATH"
+        echo "" >> "$OUTPUT_PATH"
+        echo "---" >> "$OUTPUT_PATH"
+        echo "" >> "$OUTPUT_PATH"
+        echo "$EXISTING_CONTENT" >> "$OUTPUT_PATH"
+    else
+        echo "$TRANSCRIPT" > "$OUTPUT_PATH"
+    fi
+
+    if [ $? -eq 0 ]; then
+        echo "💾 Saved to: $OUTPUT_PATH"
+    else
+        echo "⚠️  Failed to write to: $OUTPUT_PATH"
+        echo "📋 Copied to clipboard only!"
+    fi
+fi
+
+echo "$TRANSCRIPT" | pbcopy
+echo "📋 Copied to clipboard!"
+
+rm -f "$AUDIO_PATH"
+rm -rf "$STATE_DIR"
+
+echo "✅ Done"
