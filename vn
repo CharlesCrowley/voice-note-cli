@@ -105,10 +105,19 @@ fi
 
 trap cleanup_on_cancel INT
 
-# Start recording in background, fully detached
-nohup rec -q "$AUDIO_PATH" rate 16k channels 1 >/dev/null 2>&1 &
+# Start recording via setsid to make it a session leader (survives parent exit)
+setsid rec -q "$AUDIO_PATH" rate 16k channels 1 >/dev/null 2>&1 &
 RECORD_PID=$!
-disown
+
+# Give it a moment to start
+sleep 0.1
+
+# Verify it started
+if ! kill -0 $RECORD_PID 2>/dev/null; then
+    echo "❌ Failed to start recording"
+    rm -rf "$STATE_DIR"
+    exit 1
+fi
 
 START_TIME=$(date +%s)
 
@@ -116,7 +125,7 @@ echo "Run 'vn stop' when finished"
 echo ""
 
 # Run timer in background, detached from terminal
-nohup bash -c "
+setsid bash -c "
     RECORD_PID=$RECORD_PID
     START_TIME=$START_TIME
     MAX_DURATION=$MAX_DURATION
@@ -134,7 +143,6 @@ nohup bash -c "
         fi
     done
 " >/dev/null 2>&1 &
-disown
 
 # Exit immediately, returning control to user
 exit 0
