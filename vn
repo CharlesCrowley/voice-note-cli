@@ -8,6 +8,16 @@ if [ "$1" = "stop" ]; then
     exec "$(dirname "${BASH_SOURCE[0]}")/vn-stop" "$@"
 fi
 
+# If not already running in background, re-exec in background
+if [ -z "$VN_BACKGROUND" ]; then
+    export VN_BACKGROUND=1
+    "$0" "$@" </dev/null >/dev/null 2>&1 &
+    echo "🎙️  Recording started"
+    echo "Run 'vn stop' when finished"
+    echo ""
+    exit 0
+fi
+
 STATE_DIR="/tmp/vn_state"
 PID_FILE="$STATE_DIR/vn.pid"
 AUDIO_PATH_FILE="$STATE_DIR/vn_audio_path.txt"
@@ -98,50 +108,24 @@ echo "$AUDIO_PATH" > "$AUDIO_PATH_FILE"
 
 if [ -n "$OUTPUT_PATH" ]; then
     echo "$OUTPUT_PATH" > "$OUTPUT_PATH_FILE"
-    echo "🎙️  Recording started (will save to: $OUTPUT_PATH)"
-else
-    echo "🎙️  Recording started"
 fi
 
 trap cleanup_on_cancel INT
 
-# Start recording in a way that survives parent shell exit
-# Use a subshell with nohup, redirect all output, and use & to background
-(
-    trap '' HUP
-    rec -q "$AUDIO_PATH" rate 16k channels 1 </dev/null >/dev/null 2>&1
-) &
+# Start recording (simple background process)
+rec -q "$AUDIO_PATH" rate 16k channels 1 &
 RECORD_PID=$!
-
-# Give it a moment to start
-sleep 0.1
-
-# Verify it started
-if ! kill -0 $RECORD_PID 2>/dev/null; then
-    echo "❌ Failed to start recording"
-    rm -rf "$STATE_DIR"
-    exit 1
-fi
 
 START_TIME=$(date +%s)
 
-echo "Run 'vn stop' when finished"
-echo ""
-
-# Run timer in background to enforce 1-hour limit
-(
-    trap '' HUP
-    while kill -0 $RECORD_PID 2>/dev/null; do
-        sleep 1
-        elapsed=$(($(date +%s) - $START_TIME))
-        if [ $elapsed -ge $MAX_DURATION ]; then
-            kill $RECORD_PID 2>/dev/null || true
-            rm -f "$AUDIO_PATH" 2>/dev/null || true
-            rm -rf "$STATE_DIR" 2>/dev/null || true
-            exit 0
-        fi
-    done
-) </dev/null >/dev/null 2>&1 &
-
-# Exit immediately, returning control to user
-exit 0
+# Monitor recording and enforce 1-hour limit
+# This loop keeps the script alive, which keeps rec alive
+while kill -0 $RECORD_PID 2>/dev/null; do
+    sleep 1
+    elapsed=$(($(date +%s) - START_TIME))
+    if [ $elapsed -ge $MAX_DURATION ]; then
+        kill $RECORD_PID 2>/dev/null || true
+        cleanup_without_transcribe
+        exit 0
+    fi
+done
