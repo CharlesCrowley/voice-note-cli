@@ -2,6 +2,12 @@
 
 set -e
 
+# If first argument is "stop", run vn-stop instead
+if [ "$1" = "stop" ]; then
+    shift
+    exec "$(dirname "${BASH_SOURCE[0]}")/vn-stop" "$@"
+fi
+
 STATE_DIR="/tmp/vn_state"
 PID_FILE="$STATE_DIR/vn.pid"
 AUDIO_PATH_FILE="$STATE_DIR/vn_audio_path.txt"
