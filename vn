@@ -11,7 +11,21 @@ fi
 # If not already running in background, re-exec in background
 if [ -z "$VN_BACKGROUND" ]; then
     export VN_BACKGROUND=1
-    "$0" "$@" </dev/null >/dev/null 2>&1 &
+    "$0" "$@" </dev/null >/dev/null 2>/tmp/vn_debug.log &
+
+    # Give it a moment to start
+    sleep 0.3
+
+    # Verify it started by checking for PID file
+    if [ ! -f /tmp/vn_state/vn.pid ]; then
+        echo "❌ Failed to start recording"
+        if [ -f /tmp/vn_debug.log ] && [ -s /tmp/vn_debug.log ]; then
+            echo "Error log:"
+            cat /tmp/vn_debug.log
+        fi
+        exit 1
+    fi
+
     echo "🎙️  Recording started"
     echo "Run 'vn stop' when finished"
     echo ""
