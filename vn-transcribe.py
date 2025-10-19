@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
+import os
 from pathlib import Path
 
 def transcribe(audio_path: str) -> str:
@@ -19,12 +20,21 @@ def transcribe(audio_path: str) -> str:
     if audio_file.stat().st_size == 0:
         raise ValueError("Audio file is empty")
 
-    result = mlx_whisper.transcribe(
-        str(audio_file),
-        path_or_hf_repo="mlx-community/whisper-small-mlx",
-        language="en",
-        fp16=True
-    )
+    # Suppress progress bars and other output from mlx_whisper
+    # Redirect stderr to devnull during transcription
+    old_stderr = sys.stderr
+    try:
+        sys.stderr = open(os.devnull, 'w')
+        result = mlx_whisper.transcribe(
+            str(audio_file),
+            path_or_hf_repo="mlx-community/whisper-small-mlx",
+            language="en",
+            fp16=True,
+            verbose=False
+        )
+    finally:
+        sys.stderr.close()
+        sys.stderr = old_stderr
 
     text = result["text"].strip()
 
