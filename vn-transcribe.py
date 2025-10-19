@@ -21,7 +21,7 @@ def transcribe(audio_path: str) -> str:
 
     result = mlx_whisper.transcribe(
         str(audio_file),
-        path_or_hf_repo="mlx-community/whisper-small",
+        path_or_hf_repo="mlx-community/whisper-small-mlx",
         language="en",
         fp16=True
     )

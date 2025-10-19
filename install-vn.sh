@@ -57,8 +57,9 @@ pip install -q mlx-whisper
 echo "⬇️  Downloading Whisper small model (244MB, one-time download)..."
 python3 << 'EOF'
 import mlx_whisper
-print("Loading model...")
-mlx_whisper.load_model("mlx-community/whisper-small")
+from huggingface_hub import snapshot_download
+print("Downloading model...")
+snapshot_download(repo_id="mlx-community/whisper-small-mlx")
 print("Model cached successfully")
 EOF
 
