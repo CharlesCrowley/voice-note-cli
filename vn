@@ -61,6 +61,14 @@ cleanup_on_cancel() {
     exit 0
 }
 
+# Check for ANY orphaned rec processes first
+ORPHANED_RECS=$(ps aux | grep -E "rec.*vn_state" | grep -v grep | wc -l | tr -d ' ')
+if [ "$ORPHANED_RECS" -gt 0 ]; then
+    echo "❌ Found $ORPHANED_RECS orphaned recording(s) still running"
+    echo "Run 'vn-cleanup' to remove them first"
+    exit 1
+fi
+
 if [ -f "$PID_FILE" ]; then
     EXISTING_PID=$(cat "$PID_FILE")
     if kill -0 $EXISTING_PID 2>/dev/null; then
