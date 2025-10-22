@@ -11,6 +11,7 @@ Ultra-simple terminal-based voice transcription tool using local AI (no API keys
 - **Private**: Audio never leaves your machine
 - **Auto-Copy**: Transcription automatically copied to clipboard
 - **No UI**: Pure terminal, perfect for quick notes
+- **Translation**: It will translate to English from all major languages.
 
 ## Installation
 
